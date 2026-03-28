@@ -9,15 +9,22 @@
     "dev": "turbo dev",
     "build": "turbo build",
     "lint": "turbo lint",
-    "db:generate": "npm run db:generate -w @hypeforge/api",
-    "db:migrate": "npm run db:migrate -w @hypeforge/api",
-    "db:seed": "npm run db:seed -w @hypeforge/api"
+    "db:generate": "node --env-file=.env ./node_modules/prisma/build/index.js generate --schema apps/api/prisma/schema.prisma",
+    "db:migrate": "node --env-file=.env ./node_modules/prisma/build/index.js migrate dev --schema apps/api/prisma/schema.prisma",
+    "db:migrate:docker": "node scripts/run-prisma-docker.mjs migrate",
+    "db:seed": "node --env-file=.env ./node_modules/prisma/build/index.js db seed --schema apps/api/prisma/schema.prisma",
+    "db:seed:docker": "node scripts/run-prisma-docker.mjs seed",
+    "db:docker-check": "docker compose exec -T postgres psql \"postgresql://hypeforge:hypeforge@127.0.0.1:5432/hypeforge\" -c \"SELECT 1 as tcp_ok;\""
   },
   "devDependencies": {
+    "dotenv-cli": "^8.0.0",
     "turbo": "^2.3.3"
   },
   "packageManager": "npm@10.9.0",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "prisma": "^5.22.0"
   }
 }

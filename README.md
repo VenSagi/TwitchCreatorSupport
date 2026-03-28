@@ -63,17 +63,29 @@ flowchart LR
 
 More detail: [docs/LEARNING.md](docs/LEARNING.md).
 
+**First time testing on Windows?** Follow the full walkthrough: [docs/TESTING.md](docs/TESTING.md).
+
 ## Local setup
 
 1. **Node 20+** and **npm**. Optional: **Docker** for Postgres + Redis (`docker compose up -d`).  
 2. Copy env: `cp .env.example .env` and fill **Clerk** + **Stripe** test keys.  
 3. Install: `npm install` at repo root.  
-4. Database: ensure `DATABASE_URL` points at Postgres, then:
+4. Database: ensure `DATABASE_URL` points at Postgres, then (from **repo root**):
 
    ```bash
-   npm run db:migrate -w @hypeforge/api
-   npm run db:seed -w @hypeforge/api
+   npm run db:migrate
+   npm run db:seed
    ```
+
+   On **Windows**, if migrate/seed fail with **`P1000`**, use Docker-network Prisma instead, then generate the client:
+
+   ```bash
+   npm run db:migrate:docker
+   npm run db:seed:docker
+   npm run db:generate
+   ```
+
+   See [docs/TESTING.md](docs/TESTING.md) Step D.
 
 5. **Redis** must be reachable at `REDIS_URL` (worker + queue).  
 6. **Stripe webhook** (local): install [Stripe CLI](https://stripe.com/docs/stripe-cli), then:
@@ -127,7 +139,10 @@ Seed uses `clerkUserId = seed_clerk_creator`. To see **dashboard** data for a re
 | `npm run dev`        | Turborepo dev (web + api)  |
 | `npm run build`      | Build all workspaces       |
 | `npm run db:migrate` | Prisma migrate (api)       |
+| `npm run db:migrate:docker` | Prisma migrate via Compose network (Windows-friendly) |
 | `npm run db:seed`    | Seed AvaLive demo data     |
+| `npm run db:seed:docker` | Seed via Compose network (pairs with `db:migrate:docker`) |
+| `npm run db:generate` | Regenerate Prisma client after schema changes |
 
 ## Screenshots
 

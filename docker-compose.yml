@@ -1,14 +1,40 @@
 services:
   postgres:
     image: postgres:16-alpine
+    # Host 5433 avoids conflict with a local PostgreSQL (or other app) already on Windows port 5432
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: hypeforge
       POSTGRES_PASSWORD: hypeforge
       POSTGRES_DB: hypeforge
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hypeforge -d hypeforge"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  # Prisma CLI runs here (Linux + OpenSSL) on the Compose network — avoids Windows host auth quirks
+  # and avoids bind-mounting Windows node_modules into a Linux container.
+  # Usage: npm run db:migrate:docker / npm run db:seed:docker
+  db-tools:
+    build:
+      context: .
+      dockerfile: Dockerfile.db-tools
+    image: hypeforge-db-tools:local
+    working_dir: /workspace
+    volumes:
+      - ./apps/api/prisma:/workspace/prisma
+    environment:
+      DATABASE_URL: postgresql://hypeforge:hypeforge@postgres:5432/hypeforge?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - tools
 
   redis:
     image: redis:7-alpine
