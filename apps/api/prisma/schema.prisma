@@ -1,0 +1,169 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  viewer
+  creator
+  admin
+}
+
+enum CampaignStatus {
+  draft
+  active
+  paused
+  completed
+}
+
+enum SupportProductType {
+  tip
+  gift
+  goal_boost
+  pinned_message
+  perk_unlock
+}
+
+enum SupportEventStatus {
+  pending
+  paid
+  fulfilled
+  failed
+  refunded
+}
+
+model User {
+  id          String   @id @default(cuid())
+  clerkUserId String   @unique
+  email       String?
+  username    String?
+  displayName String?
+  avatarUrl   String?
+  role        UserRole @default(viewer)
+  createdAt   DateTime @default(now())
+
+  creatorProfile CreatorProfile?
+  supportEvents  SupportEvent[] @relation("ViewerSupportEvents")
+}
+
+model CreatorProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  channelName String
+  bio         String?
+  bannerUrl   String?
+  isLiveMock  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns       Campaign[]
+  supportProducts SupportProduct[]
+  supportEvents   SupportEvent[]   @relation("CreatorSupportEvents")
+}
+
+model Campaign {
+  id            String           @id @default(cuid())
+  creatorId     String
+  title         String
+  description   String?
+  goalAmount    Int
+  currentAmount Int              @default(0)
+  currency      String           @default("usd")
+  status        CampaignStatus   @default(draft)
+  startAt       DateTime?
+  endAt         DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  creator              CreatorProfile       @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  supportEvents        SupportEvent[]
+  activityFeedItems    ActivityFeedItem[]
+  leaderboardSnapshots LeaderboardSnapshot[]
+
+  @@index([creatorId])
+}
+
+model SupportProduct {
+  id          String              @id @default(cuid())
+  creatorId   String
+  name        String
+  description String?
+  type        SupportProductType
+  price       Int
+  currency    String              @default("usd")
+  isActive    Boolean             @default(true)
+  metadata    Json?
+  createdAt   DateTime            @default(now())
+
+  creator       CreatorProfile @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  supportEvents SupportEvent[]
+
+  @@index([creatorId])
+}
+
+model SupportEvent {
+  id               String             @id @default(cuid())
+  campaignId       String
+  creatorId        String
+  viewerId         String?
+  productId        String
+  amount           Int
+  currency         String
+  message          String?
+  idempotencyKey   String             @unique
+  paymentIntentId  String?            @unique
+  stripeSessionId  String?            @unique
+  status           SupportEventStatus   @default(pending)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  creator  CreatorProfile @relation("CreatorSupportEvents", fields: [creatorId], references: [id], onDelete: Cascade)
+  viewer   User?          @relation("ViewerSupportEvents", fields: [viewerId], references: [id], onDelete: SetNull)
+  product  SupportProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([campaignId])
+  @@index([creatorId])
+  @@index([viewerId])
+}
+
+model ActivityFeedItem {
+  id         String   @id @default(cuid())
+  creatorId  String
+  campaignId String
+  eventType  String
+  payload    Json
+  createdAt  DateTime @default(now())
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId, createdAt])
+}
+
+model LeaderboardSnapshot {
+  id                  String   @id @default(cuid())
+  creatorId           String
+  campaignId          String
+  viewerId            String
+  totalContribution   Int
+  rank                Int
+  updatedAt           DateTime @updatedAt
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, viewerId])
+  @@index([campaignId, rank])
+}
+
+/// Dedupe Stripe webhook deliveries (evt_...)
+model StripeWebhookEvent {
+  id        String   @id @default(cuid())
+  stripeId String   @unique
+  type      String
+  processed Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

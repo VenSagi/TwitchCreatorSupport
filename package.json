@@ -1,0 +1,23 @@
+{
+  "name": "hypeforge",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "db:generate": "npm run db:generate -w @hypeforge/api",
+    "db:migrate": "npm run db:migrate -w @hypeforge/api",
+    "db:seed": "npm run db:seed -w @hypeforge/api"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  },
+  "packageManager": "npm@10.9.0",
+  "engines": {
+    "node": ">=20"
+  }
+}
